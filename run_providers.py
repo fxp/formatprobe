@@ -129,10 +129,11 @@ PROVIDERS: list[ProviderConfig] = [
     ProviderConfig(
         name="小米 MiMo",
         slug="mimo",
-        base_url="https://api.miaoshou.ai/v1",  # MiMo API 端点（待确认）
-        default_model="MiMo-V2.5-Pro",        # AA: MiMo-V2.5-Pro Intelligence=42，$0.18/1M
-        api_key_env="MIMO_API_KEY",
-        notes="小米出品；MiMo-V2.5-Pro AA Intelligence=42，1M ctx；OpenAI 兼容",
+        base_url="https://openrouter.ai/api/v1",
+        default_model="xiaomi/mimo-v2.5-pro",  # AA: MiMo-V2.5-Pro Intelligence=42，$0.18/1M；官方 API 暂未公开
+        api_key_env="OPENROUTER_API_KEY",
+        extra_headers={"HTTP-Referer": "https://llm-diagnose", "X-Title": "LLM API Diagnose"},
+        notes="小米出品；通过 OpenRouter 接入（官方直连 API 暂未公开）；AA Intelligence=42",
     ),
 ]
 
