@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS runs (
   pass       INTEGER NOT NULL DEFAULT 0,
   latency_ms REAL,
   message    TEXT,
+  detail     TEXT,             -- raw response snippet / error body
   run_at     TEXT NOT NULL     -- ISO 8601
 );
 

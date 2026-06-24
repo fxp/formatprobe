@@ -953,6 +953,7 @@ async def _push_report(cfg: ProviderConfig, report: DiagReport, push_url: str, s
                 "name": c.name,
                 "severity": c.severity.value,
                 "message": c.message,
+                "detail": c.detail[:500] if c.detail else None,
                 "latency_ms": round(c.latency_ms, 1) if c.latency_ms else None,
             }
             for c in report.checks

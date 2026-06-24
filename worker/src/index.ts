@@ -9,6 +9,7 @@ interface CheckPayload {
   name: string;
   severity: "ok" | "warn" | "error" | "skip";
   message?: string;
+  detail?: string;
   latency_ms?: number;
 }
 
@@ -58,8 +59,8 @@ export default {
       }
 
       const stmt = env.DB.prepare(
-        `INSERT INTO runs (id, provider, slug, model, check_name, severity, pass, latency_ms, message, run_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`
+        `INSERT INTO runs (id, provider, slug, model, check_name, severity, pass, latency_ms, message, detail, run_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`
       );
 
       await env.DB.batch(
@@ -71,6 +72,7 @@ export default {
             c.severity === "ok" ? 1 : 0,
             c.latency_ms ?? null,
             c.message ?? null,
+            c.detail ?? null,
             run_at,
           )
         )
@@ -114,7 +116,7 @@ export default {
       const slug = latestM[1];
       const { results } = await env.DB.prepare(`
         WITH top AS (SELECT MAX(run_at) AS max_at FROM runs WHERE slug = ?1)
-        SELECT check_name, severity, pass, latency_ms, message, run_at
+        SELECT check_name, severity, pass, latency_ms, message, detail, run_at
         FROM runs
         WHERE slug = ?1 AND run_at = (SELECT max_at FROM top)
         ORDER BY check_name
