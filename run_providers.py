@@ -83,55 +83,56 @@ class ProviderConfig:
     notes: str = ""        # 厂商特有备注
 
 
+# 模型选型依据：Artificial Analysis LLM Leaderboard（2026-06）中国头部模型
+# https://artificialanalysis.ai/leaderboards/models
 PROVIDERS: list[ProviderConfig] = [
     ProviderConfig(
         name="智谱 GLM",
         slug="glm",
         base_url="https://open.bigmodel.cn/api/paas/v4",
-        default_model="glm-4-plus",           # 主流付费旗舰；免费可用 glm-4-flash
+        default_model="glm-5.1",              # AA: GLM-5.1 Intelligence=40；GLM-5.2 开放权重中排名#1(51)
         api_key_env="GLM_API_KEY",
-        notes="完全 OpenAI 兼容；glm-4-plus 为付费旗舰，格式遵循度优于 flash",
+        notes="Z AI 出品；glm-5.1 为当前主流 API 模型（200k ctx），AA 排名 #6 全球",
     ),
     ProviderConfig(
         name="Moonshot KIMI",
         slug="kimi",
         base_url="https://api.moonshot.cn/v1",
-        default_model="kimi-k2",              # 2025 年发布的新旗舰；回退可用 moonshot-v1-8k
+        default_model="kimi-k2",              # AA: Kimi K2.6 Intelligence=43，$0.70/1M
         api_key_env="MOONSHOT_API_KEY",
-        notes="完全 OpenAI 兼容；kimi-k2 为当前主流旗舰模型",
+        notes="Kimi K2.x 为当前旗舰（AA Intelligence=43）；256k ctx，OpenAI 兼容",
     ),
     ProviderConfig(
-        name="Minimax",
+        name="MiniMax",
         slug="minimax",
         base_url="https://api.minimaxi.com/v1",
-        default_model="MiniMax-Text-01",       # 当前主流，MiniMax-M1 为推理模型
+        default_model="MiniMax-M3",           # AA: MiniMax-M3 Intelligence=44，$0.22/1M（极高性价比）
         api_key_env="MINIMAX_API_KEY",
-        notes="新版 OpenAI 兼容接口，响应含 base_resp/input_sensitive 扩展字段",
+        notes="MiniMax-M3 为当前旗舰（AA=44），1M ctx；响应含 base_resp 扩展字段",
     ),
     ProviderConfig(
         name="通义千问 Qwen",
         slug="qwen",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        default_model="qwen-plus",             # 主流均衡模型；qwen-turbo 更快但格式合规较弱
+        default_model="qwen3-plus",           # AA: Qwen3.7 Max(46)/Qwen3.6 Plus(40)；DashScope 对应 qwen3-plus
         api_key_env="DASHSCOPE_API_KEY",
-        notes="DashScope OpenAI 兼容模式；qwen-plus 格式合规优于 qwen-turbo",
+        notes="DashScope OpenAI 兼容模式；Qwen3 系列为当前主流（AA Qwen3.7 Max=46）",
     ),
     ProviderConfig(
         name="DeepSeek",
         slug="deepseek",
         base_url="https://api.deepseek.com",
-        default_model="deepseek-chat",         # deepseek-v3 别名，当前主流
+        default_model="deepseek-chat",        # AA: DeepSeek V4 Pro Intelligence=44，$0.18/1M（顶级性价比）
         api_key_env="DEEPSEEK_API_KEY",
-        notes="deepseek-chat 为 deepseek-v3 别名，完全 OpenAI 兼容",
+        notes="deepseek-chat 为 DeepSeek V4 别名（AA=44）；完全 OpenAI 兼容",
     ),
     ProviderConfig(
-        name="OpenRouter",
-        slug="openrouter",
-        base_url="https://openrouter.ai/api/v1",
-        default_model="qwen/qwen3-235b-a22b:free",  # 免费高质量模型，格式能力强
-        api_key_env="OPENROUTER_API_KEY",
-        extra_headers={"HTTP-Referer": "https://llm-diagnose", "X-Title": "LLM API Diagnose"},
-        notes="聚合路由，OpenAI 兼容；qwen3-235b 免费且格式遵循度高",
+        name="小米 MiMo",
+        slug="mimo",
+        base_url="https://api.miaoshou.ai/v1",  # MiMo API 端点（待确认）
+        default_model="MiMo-V2.5-Pro",        # AA: MiMo-V2.5-Pro Intelligence=42，$0.18/1M
+        api_key_env="MIMO_API_KEY",
+        notes="小米出品；MiMo-V2.5-Pro AA Intelligence=42，1M ctx；OpenAI 兼容",
     ),
 ]
 
