@@ -88,23 +88,23 @@ PROVIDERS: list[ProviderConfig] = [
         name="智谱 GLM",
         slug="glm",
         base_url="https://open.bigmodel.cn/api/paas/v4",
-        default_model="glm-4-flash",
+        default_model="glm-4-plus",           # 主流付费旗舰；免费可用 glm-4-flash
         api_key_env="GLM_API_KEY",
-        notes="完全 OpenAI 兼容，glm-4-flash 免费额度大",
+        notes="完全 OpenAI 兼容；glm-4-plus 为付费旗舰，格式遵循度优于 flash",
     ),
     ProviderConfig(
         name="Moonshot KIMI",
         slug="kimi",
         base_url="https://api.moonshot.cn/v1",
-        default_model="moonshot-v1-8k",
+        default_model="kimi-k2",              # 2025 年发布的新旗舰；回退可用 moonshot-v1-8k
         api_key_env="MOONSHOT_API_KEY",
-        notes="完全 OpenAI 兼容，moonshot-v1-8k 最稳定",
+        notes="完全 OpenAI 兼容；kimi-k2 为当前主流旗舰模型",
     ),
     ProviderConfig(
         name="Minimax",
         slug="minimax",
         base_url="https://api.minimaxi.com/v1",
-        default_model="MiniMax-Text-01",
+        default_model="MiniMax-Text-01",       # 当前主流，MiniMax-M1 为推理模型
         api_key_env="MINIMAX_API_KEY",
         notes="新版 OpenAI 兼容接口，响应含 base_resp/input_sensitive 扩展字段",
     ),
@@ -112,15 +112,15 @@ PROVIDERS: list[ProviderConfig] = [
         name="通义千问 Qwen",
         slug="qwen",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        default_model="qwen-turbo",
+        default_model="qwen-plus",             # 主流均衡模型；qwen-turbo 更快但格式合规较弱
         api_key_env="DASHSCOPE_API_KEY",
-        notes="DashScope OpenAI 兼容模式，qwen-turbo 最快",
+        notes="DashScope OpenAI 兼容模式；qwen-plus 格式合规优于 qwen-turbo",
     ),
     ProviderConfig(
         name="DeepSeek",
         slug="deepseek",
         base_url="https://api.deepseek.com",
-        default_model="deepseek-chat",
+        default_model="deepseek-chat",         # deepseek-v3 别名，当前主流
         api_key_env="DEEPSEEK_API_KEY",
         notes="deepseek-chat 为 deepseek-v3 别名，完全 OpenAI 兼容",
     ),
@@ -128,10 +128,10 @@ PROVIDERS: list[ProviderConfig] = [
         name="OpenRouter",
         slug="openrouter",
         base_url="https://openrouter.ai/api/v1",
-        default_model="qwen/qwen3-next-80b-a3b-instruct:free",
+        default_model="qwen/qwen3-235b-a22b:free",  # 免费高质量模型，格式能力强
         api_key_env="OPENROUTER_API_KEY",
         extra_headers={"HTTP-Referer": "https://llm-diagnose", "X-Title": "LLM API Diagnose"},
-        notes="聚合路由，OpenAI 兼容。默认 Qwen3-Next-80B(免费)，协议兼容性最优",
+        notes="聚合路由，OpenAI 兼容；qwen3-235b 免费且格式遵循度高",
     ),
 ]
 
@@ -484,6 +484,7 @@ async def diagnose_provider(
     skip_formats: bool = False,
     skip_specific: bool = True,
     check_delay: float = 0.0,
+    format_only: bool = False,
 ) -> DiagReport:
     model = model_override or cfg.default_model
     api_key = os.environ.get(cfg.api_key_env)
@@ -510,6 +511,7 @@ async def diagnose_provider(
             cfg.base_url, api_key, model, cfg.extra_headers,
             skip_formats=skip_formats,
             check_delay=check_delay,
+            format_only=format_only,
         )
         report.checks.extend(core)
 
@@ -525,17 +527,10 @@ async def diagnose_provider(
 
 # 在对比矩阵中展示的检测项（按顺序）
 MATRIX_CHECKS = [
-    # 核心协议
-    "models_list",
+    # 格式合规（主要检测项）
     "chat_basic",
-    "chat_streaming",
     "json_mode",
-    "error_format",
-    "system_prompt",
     "tool_calling",
-    "long_output",
-    "latency_p95",
-    # 格式生成
     "fmt_json",
     "fmt_jsonl",
     "fmt_svg",
@@ -549,7 +544,14 @@ MATRIX_CHECKS = [
     "fmt_yaml",
     "fmt_toml",
     "fmt_sql",
-    # 厂商专属
+    # 全量协议（--format-only 时不运行）
+    "models_list",
+    "chat_streaming",
+    "error_format",
+    "system_prompt",
+    "long_output",
+    "latency_p95",
+    # 厂商专属（--with-specific 时运行）
     "minimax_ext_fields",
     "glm_web_search",
     "kimi_long_ctx",
@@ -558,15 +560,9 @@ MATRIX_CHECKS = [
 ]
 
 MATRIX_LABELS = {
-    "models_list":          "模型列表",
     "chat_basic":           "基础对话",
-    "chat_streaming":       "流式 SSE",
     "json_mode":            "JSON 模式",
-    "error_format":         "错误格式",
-    "system_prompt":        "System Prompt",
     "tool_calling":         "工具调用",
-    "long_output":          "长输出",
-    "latency_p95":          "延迟 p95",
     "fmt_json":             "生成 JSON",
     "fmt_jsonl":            "生成 JSONL",
     "fmt_svg":              "SVG 基础",
@@ -580,6 +576,12 @@ MATRIX_LABELS = {
     "fmt_yaml":             "生成 YAML",
     "fmt_toml":             "生成 TOML",
     "fmt_sql":              "生成 SQL",
+    "models_list":          "模型列表",
+    "chat_streaming":       "流式 SSE",
+    "error_format":         "错误格式",
+    "system_prompt":        "System Prompt",
+    "long_output":          "长输出",
+    "latency_p95":          "延迟 p95",
     "minimax_ext_fields":   "Minimax 扩展字段",
     "glm_web_search":       "GLM 联网搜索",
     "kimi_long_ctx":        "KIMI 长上下文",
@@ -588,8 +590,8 @@ MATRIX_LABELS = {
 }
 
 SECTION_BREAKS = {
-    "models_list":       "── 核心协议 ──",
-    "fmt_json":          "── 格式生成 ──",
+    "chat_basic":        "── 格式合规 ──",
+    "models_list":       "── 协议检测 ──",
     "minimax_ext_fields":"── 厂商专属 ──",
 }
 
@@ -769,6 +771,10 @@ def main(
         False, "--skip-formats",
         help="跳过结构化格式生成检测（JSON/SVG/XML 等）",
     ),
+    format_only: bool = typer.Option(
+        False, "--format-only",
+        help="只运行格式合规检测（chat sanity + json_mode + tool_calling + fmt_*），跳过协议类检测",
+    ),
     check_delay: float = typer.Option(
         0.0, "--check-delay",
         help="每次检测之间的等待秒数（对限速严格的模型如 glm-5.2 建议 65）",
@@ -848,10 +854,11 @@ def main(
         out_dir.mkdir(parents=True, exist_ok=True)
 
     console.print()
+    mode_label = "仅格式合规" if format_only else ("跳过格式" if skip_formats else "全量检测")
     console.print(Panel(
         f"[bold cyan]LLM API 批量诊断[/bold cyan]\n"
         f"厂商: {' / '.join(p.name for p in target_providers)}\n"
-        f"格式检测: {'关闭' if skip_formats else '开启'} | "
+        f"模式: {mode_label} | "
         f"厂商专属: {'开启' if with_specific else '关闭'} | "
         f"并发: {'是' if parallel else '否'} | "
         + (f"间隔: {check_delay:.0f}s | " if check_delay > 0 else "")
@@ -871,6 +878,7 @@ def main(
             skip_formats=skip_formats,
             skip_specific=not with_specific,
             check_delay=check_delay,
+            format_only=format_only,
         )
         if not no_detail:
             render_report(report)

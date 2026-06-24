@@ -2129,20 +2129,32 @@ async def run_openai_checks(
     extra_headers: dict,
     skip_formats: bool = False,
     check_delay: float = 0.0,
+    format_only: bool = False,
 ) -> list[CheckResult]:
+    """
+    format_only=True: 只运行格式合规相关检测（chat sanity + json_mode + tool_calling + fmt_*）。
+    省略 models_list / streaming / error_format / system_prompt / long_output / latency_p95。
+    """
     async with make_client(api_key, extra_headers) as client:
         results = []
-        core_checks = [
-            (check_openai_models,       (base_url, client)),
-            (check_openai_chat,         (base_url, client, model)),
-            (check_openai_streaming,    (base_url, client, model)),
-            (check_openai_json_mode,    (base_url, client, model)),
-            (check_openai_error_format, (base_url, client, model)),
-            (check_openai_system_prompt,(base_url, client, model)),
-            (check_openai_tool_calling, (base_url, client, model)),
-            (check_openai_long_output,  (base_url, client, model)),
-            (check_openai_latency_p95,  (base_url, client, model)),
-        ]
+        if format_only:
+            core_checks = [
+                (check_openai_chat,         (base_url, client, model)),
+                (check_openai_json_mode,    (base_url, client, model)),
+                (check_openai_tool_calling, (base_url, client, model)),
+            ]
+        else:
+            core_checks = [
+                (check_openai_models,       (base_url, client)),
+                (check_openai_chat,         (base_url, client, model)),
+                (check_openai_streaming,    (base_url, client, model)),
+                (check_openai_json_mode,    (base_url, client, model)),
+                (check_openai_error_format, (base_url, client, model)),
+                (check_openai_system_prompt,(base_url, client, model)),
+                (check_openai_tool_calling, (base_url, client, model)),
+                (check_openai_long_output,  (base_url, client, model)),
+                (check_openai_latency_p95,  (base_url, client, model)),
+            ]
         for fn, args in core_checks:
             if check_delay > 0 and results:
                 await asyncio.sleep(check_delay)
