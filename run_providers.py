@@ -98,9 +98,9 @@ PROVIDERS: list[ProviderConfig] = [
         name="Moonshot KIMI",
         slug="kimi",
         base_url="https://api.moonshot.cn/v1",
-        default_model="kimi-k2",              # AA: Kimi K2.6 Intelligence=43，$0.70/1M
+        default_model="kimi-k2.6",             # AA: Kimi K2.6 Intelligence=43，$0.70/1M
         api_key_env="MOONSHOT_API_KEY",
-        notes="Kimi K2.x 为当前旗舰（AA Intelligence=43）；256k ctx，OpenAI 兼容",
+        notes="Kimi K2.6 为当前旗舰（AA Intelligence=43）；256k ctx，OpenAI 兼容",
     ),
     ProviderConfig(
         name="MiniMax",
@@ -114,7 +114,7 @@ PROVIDERS: list[ProviderConfig] = [
         name="通义千问 Qwen",
         slug="qwen",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-        default_model="qwen3-plus",           # AA: Qwen3.7 Max(46)/Qwen3.6 Plus(40)；DashScope 对应 qwen3-plus
+        default_model="qwen3.7-plus",          # AA: Qwen3.6 Plus(40)；DashScope 用点分命名 qwen3.7-plus
         api_key_env="DASHSCOPE_API_KEY",
         notes="DashScope OpenAI 兼容模式；Qwen3 系列为当前主流（AA Qwen3.7 Max=46）",
     ),
