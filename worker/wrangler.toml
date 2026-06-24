@@ -1,0 +1,16 @@
+name            = "formatprobe-worker"
+main            = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding      = "DB"
+database_name = "formatprobe"
+database_id  = "e17c81f2-5183-4c77-9619-3e3320496a89"
+
+[triggers]
+crons = ["0 */6 * * *"]
+
+# Secrets set via: wrangler secret put INGEST_SECRET
+# wrangler secret put GH_TOKEN
+# wrangler secret put GH_REPO   (e.g. "yourname/formatprobe")

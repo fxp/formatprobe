@@ -1,0 +1,44 @@
+name: LLM API Probe
+
+on:
+  workflow_dispatch:        # Cloudflare Cron 触发，也可手动触发
+  schedule:
+    - cron: '30 */6 * * *'  # 备用：GitHub 自身定时（与 CF Cron 错开30分钟）
+
+jobs:
+  probe:
+    name: probe-${{ matrix.provider }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        provider: [glm, kimi, qwen, deepseek, minimax, openrouter]
+      fail-fast: false
+      max-parallel: 3       # 同时跑3个，避免同一厂商并发限速
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install httpx typer rich
+
+      - name: Run probe & push to Cloudflare
+        env:
+          GLM_API_KEY:              ${{ secrets.GLM_API_KEY }}
+          MOONSHOT_API_KEY:         ${{ secrets.MOONSHOT_API_KEY }}
+          DASHSCOPE_API_KEY:        ${{ secrets.DASHSCOPE_API_KEY }}
+          DEEPSEEK_API_KEY:         ${{ secrets.DEEPSEEK_API_KEY }}
+          MINIMAX_API_KEY:          ${{ secrets.MINIMAX_API_KEY }}
+          OPENROUTER_API_KEY:       ${{ secrets.OPENROUTER_API_KEY }}
+          FORMATPROBE_PUSH_URL:     ${{ secrets.FORMATPROBE_PUSH_URL }}
+          FORMATPROBE_PUSH_SECRET:  ${{ secrets.FORMATPROBE_PUSH_SECRET }}
+        run: |
+          python run_providers.py \
+            --only ${{ matrix.provider }} \
+            --push-url "$FORMATPROBE_PUSH_URL" \
+            --push-secret "$FORMATPROBE_PUSH_SECRET"

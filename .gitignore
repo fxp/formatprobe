@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.py[cod]
+worker/node_modules/
+reports/
+*.log
+.DS_Store
+.gstack/

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FormatProbe — LLM API 健康监控</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  body { background: #0f1117; color: #e2e8f0; font-family: system-ui, sans-serif; }
+  .card { background: #1a1d27; border: 1px solid #2d3142; border-radius: 12px; }
+  .badge-ok    { background: #14532d; color: #86efac; }
+  .badge-warn  { background: #713f12; color: #fde68a; }
+  .badge-error { background: #7f1d1d; color: #fca5a5; }
+  .badge-skip  { background: #1e293b; color: #94a3b8; }
+  .rate-high   { color: #4ade80; }
+  .rate-mid    { color: #facc15; }
+  .rate-low    { color: #f87171; }
+  .sparkline-canvas { width: 120px !important; height: 36px !important; }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; padding: 8px 12px; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #2d3142; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e2232; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1e2335; }
+  .check-row td:first-child { font-family: monospace; font-size: 12px; color: #94a3b8; }
+  #detail-panel { display: none; }
+</style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-8">
+  <div>
+    <h1 class="text-2xl font-bold text-white">FormatProbe</h1>
+    <p class="text-slate-400 text-sm mt-1">LLM API 格式合规性 · 持续监控</p>
+  </div>
+  <div class="text-right text-xs text-slate-500">
+    <div id="last-updated">加载中…</div>
+    <div class="mt-1"><button onclick="loadLeaderboard()" class="text-indigo-400 hover:text-indigo-300">刷新</button></div>
+  </div>
+</div>
+
+<!-- Leaderboard -->
+<div class="card mb-6">
+  <div class="px-5 py-4 border-b border-slate-700 flex items-center gap-3">
+    <h2 class="font-semibold text-white">排行榜</h2>
+    <span class="text-xs text-slate-500">最近一次探测结果</span>
+  </div>
+  <div id="leaderboard-body">
+    <div class="p-8 text-center text-slate-500 text-sm">加载中…</div>
+  </div>
+</div>
+
+<!-- Provider Detail Panel -->
+<div id="detail-panel" class="card">
+  <div class="px-5 py-4 border-b border-slate-700 flex items-center justify-between">
+    <h2 class="font-semibold text-white" id="detail-title">详情</h2>
+    <button onclick="closeDetail()" class="text-slate-400 hover:text-white text-xl leading-none">×</button>
+  </div>
+  <!-- 30-day trend chart -->
+  <div class="px-5 py-4 border-b border-slate-700">
+    <div class="text-xs text-slate-400 mb-2">30 天通过率趋势</div>
+    <canvas id="trend-chart" height="70"></canvas>
+  </div>
+  <!-- Check breakdown table -->
+  <div id="detail-checks">
+    <div class="p-8 text-center text-slate-500 text-sm">加载中…</div>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+// Replace with your deployed Worker URL (e.g. https://formatprobe-worker.yourname.workers.dev)
+const API = "https://formatprobe-worker.fxp007.workers.dev";
+
+const SEV_BADGE = {
+  ok:    '<span class="badge-ok px-2 py-0.5 rounded text-xs font-medium">✓ OK</span>',
+  warn:  '<span class="badge-warn px-2 py-0.5 rounded text-xs font-medium">⚠ WARN</span>',
+  error: '<span class="badge-error px-2 py-0.5 rounded text-xs font-medium">✗ ERROR</span>',
+  skip:  '<span class="badge-skip px-2 py-0.5 rounded text-xs font-medium">— SKIP</span>',
+};
+
+function rateClass(r) {
+  return r >= 90 ? "rate-high" : r >= 70 ? "rate-mid" : "rate-low";
+}
+
+function fmtTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+}
+
+function fmtMs(ms) {
+  if (ms == null) return "—";
+  return ms >= 1000 ? `${(ms/1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+async function loadLeaderboard() {
+  const el = document.getElementById("leaderboard-body");
+  try {
+    const data = await fetch(`${API}/api/leaderboard`).then(r => r.json());
+    if (!Array.isArray(data) || data.length === 0) {
+      el.innerHTML = '<div class="p-8 text-center text-slate-500 text-sm">暂无数据 — 探针尚未运行</div>';
+      return;
+    }
+
+    const rows = data.map(row => `
+      <tr class="cursor-pointer" onclick="openDetail('${row.slug}', '${row.provider}')">
+        <td><span class="font-medium text-white">${row.provider}</span><br><span class="text-xs text-slate-500">${row.model}</span></td>
+        <td class="text-2xl font-bold ${rateClass(row.pass_rate)}">${row.pass_rate ?? "—"}%</td>
+        <td>
+          <span class="text-green-400">${row.ok_count}</span> /
+          <span class="text-yellow-400">${row.warn_count}</span> /
+          <span class="text-red-400">${row.error_count}</span>
+          <span class="text-slate-500 ml-1 text-xs">ok/warn/err</span>
+        </td>
+        <td id="spark-${row.slug}"><canvas class="sparkline-canvas" id="sparkline-${row.slug}"></canvas></td>
+        <td class="text-slate-400 text-xs">${fmtTime(row.last_run_at)}</td>
+      </tr>
+    `).join("");
+
+    el.innerHTML = `
+      <table>
+        <thead><tr>
+          <th>厂商 / 模型</th>
+          <th>通过率</th>
+          <th>OK / WARN / ERROR</th>
+          <th>7日趋势</th>
+          <th>最近探测</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+
+    document.getElementById("last-updated").textContent =
+      "更新于 " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+
+    // Render sparklines
+    for (const row of data) {
+      loadSparkline(row.slug);
+    }
+  } catch (e) {
+    el.innerHTML = `<div class="p-8 text-center text-red-400 text-sm">加载失败: ${e.message}<br><span class="text-slate-500 text-xs">确认 API 地址已在 index.html 中配置</span></div>`;
+  }
+}
+
+async function loadSparkline(slug) {
+  try {
+    const hist = await fetch(`${API}/api/provider/${slug}/history?days=7`).then(r => r.json());
+    const canvas = document.getElementById(`sparkline-${slug}`);
+    if (!canvas || !Array.isArray(hist)) return;
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: hist.map(h => h.date),
+        datasets: [{
+          data: hist.map(h => h.pass_rate),
+          borderColor: "#6366f1",
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.3,
+        }]
+      },
+      options: {
+        responsive: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false, min: 0, max: 100 },
+        },
+        animation: false,
+      }
+    });
+  } catch {}
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+let trendChart = null;
+
+async function openDetail(slug, provider) {
+  document.getElementById("detail-panel").style.display = "block";
+  document.getElementById("detail-title").textContent = `${provider} — 检测详情`;
+  document.getElementById("detail-checks").innerHTML =
+    '<div class="p-8 text-center text-slate-500 text-sm">加载中…</div>';
+  document.getElementById("detail-panel").scrollIntoView({ behavior: "smooth" });
+
+  // Trend chart
+  const hist = await fetch(`${API}/api/provider/${slug}/history?days=30`).then(r => r.json()).catch(() => []);
+  if (trendChart) trendChart.destroy();
+  const ctx = document.getElementById("trend-chart").getContext("2d");
+  trendChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: hist.map(h => h.date),
+      datasets: [{
+        label: "通过率 %",
+        data: hist.map(h => h.pass_rate),
+        borderColor: "#6366f1",
+        backgroundColor: "rgba(99,102,241,0.1)",
+        borderWidth: 2,
+        pointRadius: 3,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: "index", intersect: false },
+      },
+      scales: {
+        x: { ticks: { color: "#64748b", maxTicksLimit: 10 }, grid: { color: "#1e2232" } },
+        y: { min: 0, max: 100, ticks: { color: "#64748b" }, grid: { color: "#1e2232" } },
+      },
+    }
+  });
+
+  // Latest checks
+  const checks = await fetch(`${API}/api/provider/${slug}/latest`).then(r => r.json()).catch(() => []);
+  if (!Array.isArray(checks) || checks.length === 0) {
+    document.getElementById("detail-checks").innerHTML =
+      '<div class="p-8 text-center text-slate-500 text-sm">暂无检测记录</div>';
+    return;
+  }
+
+  const rows = checks.map(c => `
+    <tr class="check-row">
+      <td>${c.check_name}</td>
+      <td>${SEV_BADGE[c.severity] ?? c.severity}</td>
+      <td class="text-slate-400">${fmtMs(c.latency_ms)}</td>
+      <td class="text-slate-400 max-w-xs truncate" title="${c.message ?? ""}">${c.message ?? "—"}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("detail-checks").innerHTML = `
+    <table>
+      <thead><tr>
+        <th>检测项</th><th>结果</th><th>延迟</th><th>详情</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function closeDetail() {
+  document.getElementById("detail-panel").style.display = "none";
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
+}
+
+// Init
+loadLeaderboard();
+</script>
+</body>
+</html>

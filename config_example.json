@@ -1,0 +1,36 @@
+{
+  "_comment": "LLM API 诊断配置示例，可传给 --config（计划功能）",
+  "targets": [
+    {
+      "name": "OpenAI 官方",
+      "url": "https://api.openai.com",
+      "model": "gpt-4o-mini",
+      "protocol": "openai",
+      "api_key_env": "OPENAI_API_KEY"
+    },
+    {
+      "name": "Anthropic 官方",
+      "url": "https://api.anthropic.com",
+      "model": "claude-3-5-haiku-20241022",
+      "protocol": "anthropic",
+      "api_key_env": "ANTHROPIC_API_KEY"
+    },
+    {
+      "name": "本地 Ollama",
+      "url": "http://localhost:11434",
+      "model": "llama3",
+      "protocol": "openai",
+      "api_key_env": null
+    },
+    {
+      "name": "自定义代理",
+      "url": "https://your-proxy.example.com",
+      "model": "gpt-4o",
+      "protocol": "openai",
+      "api_key_env": "PROXY_API_KEY",
+      "extra_headers": {
+        "X-Custom-Header": "value"
+      }
+    }
+  ]
+}

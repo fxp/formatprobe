@@ -1,0 +1,16 @@
+{
+  "name": "formatprobe-worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev":     "wrangler dev",
+    "deploy":  "wrangler deploy",
+    "db:init": "wrangler d1 execute formatprobe --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute formatprobe --file=schema.sql --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240725.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^3.67.0"
+  }
+}
