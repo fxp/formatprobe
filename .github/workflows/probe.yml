@@ -28,6 +28,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run probe & push to Cloudflare
+        continue-on-error: true   # 探针本身检出 ERROR 不等于 CI 失败
         env:
           GLM_API_KEY:              ${{ secrets.GLM_API_KEY }}
           MOONSHOT_API_KEY:         ${{ secrets.MOONSHOT_API_KEY }}
