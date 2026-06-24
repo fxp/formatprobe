@@ -25,7 +25,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install httpx typer rich
+        run: pip install -r requirements.txt
 
       - name: Run probe & push to Cloudflare
         env:
